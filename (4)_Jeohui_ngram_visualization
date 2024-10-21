@@ -1,39 +1,20 @@
 ##designed for Google COLAB
 ##designed by Jimin Han & Jaehyun SEO
 
-!pip install openpyxl adjustText pandas openpyxl konlpy --quiet
+!pip install openpyxl adjustText pandas openpyxl kiwi --quiet
 
 import pandas as pd
-import matplotlib as mpl
 import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib import rc
-from collections import Counter
-from konlpy.tag import Kkma
+from kiwi import Kiwi
 from adjustText import adjust_text
 
-# Nanum 폰트 설치
-!sudo apt-get install -y fonts-nanum
-!sudo fc-cache -fv
-!rm -rf ~/.cache/matplotlib
+# Kiwi 초기화
+kiwi = Kiwi()
 
-
-
-##(1)분류 완료된 데이터 투입
-
+# (1) 분류 완료된 데이터 투입
 df = pd.read_pickle('/content/jeohui/v3_jeohui_040730_third_data_predictions.pickle')
 
-###(1-1)최초 수정을 위한 작업임, 이후에 또 할 필요 없이 (2)로 넘어가기
-
-import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer
-from collections import Counter
-from konlpy.tag import Kkma
-
-# Initialize Kkma for morphological analysis
-kkma = Kkma()
-
-# Define a function to extract n-grams around the word "저희"
+# Kiwi를 사용한 n-gram 추출 함수
 def find_ngrams_and_filter_nouns(texts, target_word, n=2):
     ngrams_list = []
     for sentence in texts:
@@ -43,8 +24,8 @@ def find_ngrams_and_filter_nouns(texts, target_word, n=2):
             if idx + n <= len(tokens):
                 ngram = " ".join(tokens[idx:idx + n])
 
-                # Perform morphological analysis and extract only nouns
-                morphs = kkma.pos(ngram)
+                # Perform morphological analysis and extract only nouns using Kiwi
+                morphs = kiwi.analyze(ngram)[0][0]
                 filtered_ngram = " ".join([word for word, pos in morphs if pos.startswith('NN')])
 
                 if filtered_ngram:
@@ -54,39 +35,24 @@ def find_ngrams_and_filter_nouns(texts, target_word, n=2):
 ngrams_after_jeohee = find_ngrams_and_filter_nouns(df['sentence'], '저희', n=2)
 ngrams_after_jeohee
 
-수정용 시트 제작
-
-# Convert the n-grams list to a DataFrame
+# 수정용 시트 제작
 ngram_df = pd.DataFrame(ngrams_after_jeohee, columns=['Extracted N-grams'])
 
-# Sort the DataFrame by the length of the strings in the 'Extracted N-grams' column (descending)
-ngram_df['Length'] = ngram_df['Extracted N-grams'].apply(len)  # Add a new column with the length of each n-gram
-ngram_df = ngram_df.sort_values(by='Length', ascending=False).drop(columns=['Length'])  # Sort by length and drop the length column
+# Sort by the length of the strings in the 'Extracted N-grams' column (descending)
+ngram_df['Length'] = ngram_df['Extracted N-grams'].apply(len)
+ngram_df = ngram_df.sort_values(by='Length', ascending=False).drop(columns=['Length'])
 
 # Add an empty column for corrections
 ngram_df['Corrected N-grams'] = ''
 
 # Export the DataFrame to an Excel file for manual review
 ngram_df.to_excel("ngram_review.xlsx", index=False)
-
 print("N-grams exported to 'ngram_review.xlsx' for review.")
 
-만일 Corrected N-grams  컬럼에 값이 있다면 그 값을 사용하고, 값이 없다면 Extracted N-grams 의 값을 사용하되, 띄어쓰기를 제거하고 사용
-
-
-corrected_ngram_df
-
-##(2)수정용 시트 반영해 엔그램 분석
-
+# 수동으로 수정한 파일 반영
 corrected_df = pd.read_excel("/content/drive/MyDrive/jeohui/ngram_review (1)_JJ.xlsx")
-kkma = Kkma()
 
-# Fill NaN values in 'Corrected N-grams' by removing spaces from 'Extracted N-grams'
-corrected_df['Corrected N-grams'] = corrected_df['Corrected N-grams'].fillna(
-    corrected_df['Extracted N-grams'].str.replace(' ', '')
-)
-
-# Define a function to extract n-grams around the word "저희" and apply custom corrections
+# Kiwi를 사용하여 수정된 n-gram 반영
 def find_ngrams_and_apply_custom_rules(texts, target_word, corrected_df, n=2):
     ngrams_list = []
 
@@ -97,18 +63,16 @@ def find_ngrams_and_apply_custom_rules(texts, target_word, corrected_df, n=2):
             if idx + n <= len(tokens):
                 ngram = " ".join(tokens[idx:idx + n])
 
-                # Perform morphological analysis and extract only nouns
-                morphs = kkma.pos(ngram)
+                # Perform morphological analysis and extract only nouns using Kiwi
+                morphs = kiwi.analyze(ngram)[0][0]
                 filtered_ngram = " ".join([word for word, pos in morphs if pos.startswith('NN')])
 
-                # Check if the filtered n-gram exists in the Extracted N-grams column and apply correction
+                # Apply custom corrections from the Excel data
                 corrected_value = corrected_df.loc[corrected_df['Extracted N-grams'] == filtered_ngram, 'Corrected N-grams']
-
-                # If there is a correction, use it, otherwise use the filtered n-gram without spaces
                 if not corrected_value.empty:
-                    filtered_ngram = corrected_value.values[0]  # Use the corrected value
+                    filtered_ngram = corrected_value.values[0]
                 else:
-                    filtered_ngram = filtered_ngram.replace(' ', '')  # Use the original but remove spaces
+                    filtered_ngram = filtered_ngram.replace(' ', '')
 
                 if filtered_ngram:
                     ngrams_list.append(filtered_ngram)
@@ -121,65 +85,10 @@ ngrams_after_correction = find_ngrams_and_apply_custom_rules(df['sentence'], '�
 # Display the result
 print("Final N-grams after applying custom corrections:", ngrams_after_correction)
 
-###ngram 결과 데이터 파일 생성 'ngram_analysis_v2.xlsx'
-
-# This version will return a list of tuples, where each tuple contains (ngram, year, decade)
-def find_ngrams_and_apply_custom_rules(texts, years, target_word, corrected_df, n=2):
-    all_ngrams_list = []  # List to store (ngram, year, decade)
-
-    for sentence, year in zip(texts, years):
-        tokens = sentence.split()
-        if target_word in tokens:
-            idx = tokens.index(target_word)
-            if idx + n <= len(tokens):
-                ngram = " ".join(tokens[idx:idx + n])
-
-                # Perform morphological analysis and extract only nouns
-                morphs = kkma.pos(ngram)
-                filtered_ngram = " ".join([word for word, pos in morphs if pos.startswith('NN')])
-
-                # Check if the filtered n-gram exists in the Extracted N-grams column and apply correction
-                corrected_value = corrected_df.loc[corrected_df['Extracted N-grams'] == filtered_ngram, 'Corrected N-grams']
-
-                # If there is a correction, use it, otherwise use the filtered n-gram without spaces
-                if not corrected_value.empty:
-                    filtered_ngram = corrected_value.values[0]  # Use the corrected value
-                else:
-                    filtered_ngram = filtered_ngram.replace(' ', '')  # Use the original but remove spaces
-
-                if filtered_ngram:
-                    decade = (year // 10) * 10  # Calculate the decade
-                    all_ngrams_list.append((filtered_ngram, year, decade))  # Append the n-gram with year and decade
-
-    return all_ngrams_list  # Return a list of tuples (ngram, year, decade)
-
-# Apply the function with custom corrections based on the Excel data
-ngrams_with_years = find_ngrams_and_apply_custom_rules(df['sentence'], df['year'], '저희', corrected_df, n=2)
-
-# Create a DataFrame with the n-grams, year, and decade
-ngrams_df = pd.DataFrame(ngrams_with_years, columns=['ngram', 'year', 'decade'])
-
-# Create a function to calculate n-gram frequencies by year/decade
-def calculate_ngram_frequencies(df, top_n=20):
-    # Calculate frequency per year and decade
-    frequency_by_year = df.groupby(['year', 'ngram']).size().reset_index(name='frequency')
-    frequency_by_decade = df.groupby(['decade', 'ngram']).size().reset_index(name='frequency')
-
-    # Get top n n-grams by year and decade
-    top_ngrams_by_year = frequency_by_year.groupby('year').apply(lambda x: x.nlargest(top_n, 'frequency')).reset_index(drop=True)
-    top_ngrams_by_decade = frequency_by_decade.groupby('decade').apply(lambda x: x.nlargest(top_n, 'frequency')).reset_index(drop=True)
-
-    return top_ngrams_by_decade, top_ngrams_by_year
-
-# Calculate top n n-grams by year and decade
-top_ngrams_by_decade, top_ngrams_by_year = calculate_ngram_frequencies(ngrams_df, top_n=20)
-
-# Export to Excel
-with pd.ExcelWriter("ngram_analysis_v2.xlsx", engine='openpyxl') as writer:
-    top_ngrams_by_decade.to_excel(writer, sheet_name='Top Ngrams by Decade', index=False)
-    top_ngrams_by_year.to_excel(writer, sheet_name='Top Ngrams by Year', index=False)
-
-print("Excel file created: ngram_analysis_v2.xlsx")
+# Excel 파일로 최종 데이터 저장
+ngrams_df = pd.DataFrame(ngrams_after_correction, columns=['Ngram'])
+ngrams_df.to_excel('ngram_analysis_kiwi_v2.xlsx', index=False)
+print("Excel file created: ngram_analysis_kiwi_v2.xlsx")
 
 
 
