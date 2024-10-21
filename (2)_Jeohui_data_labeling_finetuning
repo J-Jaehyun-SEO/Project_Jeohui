@@ -1,0 +1,112 @@
+##학습데이터 추출(레이블링용)
+# 필요한 패키지 설치
+!pip install --upgrade matplotlib kiwipiepy pandas tqdm konlpy xlsxwriter
+!pip install numpy==1.23.5
+
+# Nanum 폰트 설치
+!sudo apt-get install -y fonts-nanum
+!sudo fc-cache -fv
+!rm -rf ~/.cache/matplotlib
+
+# 라이브러리 임포트
+import pandas as pd
+import numpy as np
+import re
+from tqdm import tqdm
+from kiwipiepy import Kiwi
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import pandas as pd
+import xlsxwriter
+
+# Output file path
+df['jeohee_sentence'] = df['jeohee_sentence'].astype(str)
+output_path = "/content/학습용데이터/recent_df_0707-추출(sampled_df_2100)백업_1차.xlsx"
+
+# Create a new Excel file and add a worksheet
+workbook = xlsxwriter.Workbook(output_path)
+worksheet = workbook.add_worksheet(name='Extracted Sentences')
+
+# Define formats
+red_format = workbook.add_format({'font_color': 'red'})
+default_format = workbook.add_format({'font_color': 'black'})  # Default formatting
+
+# Write headers
+for col_num, value in enumerate(df.columns):
+    worksheet.write(0, col_num, value, default_format)
+
+# Iterate over rows to apply rich text formatting
+for idx, row in enumerate(df.itertuples(index=False), start=1):
+    for col_idx, value in enumerate(row):
+        if df.columns[col_idx] == 'jeohee_sentence':  # Apply formatting to 'jeohee_sentence' column
+            if isinstance(value, str) and value:  # Ensure the value is a non-empty string
+                parts = value.split('저희')
+                # Prepare the rich text with the appropriate formatting
+                rich_text = []
+                if parts[0]:
+                    rich_text = [default_format, parts[0]]
+                for part in parts[1:]:
+                    rich_text.extend([red_format, '저희', default_format, part])
+                # Write the rich string to the corresponding cell
+                if rich_text:
+                    worksheet.write_rich_string(idx, col_idx, *rich_text)
+                else:
+                    worksheet.write(idx, col_idx, value, default_format)
+            else:
+                worksheet.write(idx, col_idx, value, default_format)
+        else:
+            worksheet.write(idx, col_idx, value, default_format)
+
+# Close the workbook and save the file
+workbook.close()
+print(f"Filtered data saved to {output_path}")
+
+
+import pandas as pd
+
+# 연도별 데이터 비율 계산
+year_counts = new_df_jeohee['year'].value_counts(normalize=True)
+
+# 총 2100건 샘플링
+sampled_df = pd.DataFrame()
+for year, proportion in year_counts.items():
+    num_samples = round(proportion * 2100)
+    year_samples = new_df_jeohee[new_df_jeohee['year'] == year].sample(n=num_samples, random_state=1)
+    sampled_df = pd.concat([sampled_df, year_samples])
+
+# 인덱스 초기화 및 연도별 정렬
+sampled_df_2100 = sampled_df.reset_index(drop=True).sort_values(by='year', ascending=True)
+
+
+###Training 데이터 편집 및 추출
+
+# '저희' 포함 문장과 그 앞뒤 문장 추출
+new_rows = []
+for index, row in recent_news_df.iterrows():
+    # 'text' 컬럼이 NaN이 아닌 경우에만 처리
+    if pd.notna(row['text']):
+        text = str(row['text']).replace('\n', ' ')  # 'text'를 문자열로 변환
+
+        # . , 。 , ! , ? 을 기준으로 문장 분리
+        sentences = re.split(r'(?<=[\.!?。． ])', text)
+
+        for i, sent in enumerate(sentences):
+            if '저희' in sent:
+                new_row = row.to_dict()
+
+                context_sentences = []
+                if i > 0:
+                    context_sentences.append(sentences[i - 1].strip())
+                context_sentences.append(sent.strip())
+                if i < len(sentences) - 1:
+                    context_sentences.append(sentences[i + 1].strip())
+
+                new_row['context'] = ' '.join(context_sentences)
+                new_rows.append(new_row)
+
+new_df = pd.DataFrame(new_rows)
+
+# 결과 출력
+print(new_df)
+
+new_df = new_df.rename(columns={'Newspaper': 'publisher'})
