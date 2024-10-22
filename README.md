@@ -7,18 +7,19 @@ Project_Jeohui
 
 멀리서 읽는 “저희” ―ELECTRA 기반 의미 분류 모델과 N-gram을 활용한 두 가지 ‘저희’의 통시적 변화 양상 연구 
 
-1. 코드설명
-데이터 수집 및 전처리 
+#1. 코드설명
+
+##데이터 수집 및 전처리 
 ‘저희’가 포함된 문장 총 32,803개를 추출하여 데이터 구성
 조선·동아일보 100년 아카이브로부터  1954년부터 1999년까지, ‘저희'의 단어가 포함된, 총 7,067건 ( 동아일보 3,287건, 조선일보 3,781건)의 기사로부터 문장을 추출
  2000년부터 2024년 5월까지의 빅카인즈 DB의 조선·동아일보 기사에서 단어 ‘저희'가 포함된 16,195건 (동아일보 9010건, 조선일보 7185건)의 기사를 추출
 
-추출 과정
+###추출 과정
 문장 추출은 다음의 과정을 통해 이루어짐 
 1 단계: 문장 분리가 되지 않은 상태의 기사 텍스트를 kiwi의 문장 분리 기능을 활용해 문장 분리. 2단계: 이때 문장 분리는 마침표와 한국어의 종결어미 등을 종합적으로 판단해 기계학습 모형으로 판단. 
 3단계: 문장분리 알고리즘을 통해 기사당 문장수 추출, kiwi 형태소 분석기 알고리즘과 관련하여 다음의 논문을 참조 (이민철, 「Kiwi: 통계적 언어 모델과 Skip-Bigram을 이용한 한국어 형태소 분석기 구현」, 『디지털인문학』 1, 2024, 109-36면.)
 
-ELECTRA 기반 의미 분류 모델
+##ELECTRA 기반 의미 분류 모델
 
 Pytorch + HuggingFace
 [KoElectra Model](https://monologg.kr/2020/05/02/koelectra-part1/)
@@ -30,13 +31,13 @@ References
 - (https://tutorials.pytorch.kr/beginner/blitz/cifar10_tutorial.html)
 - (https://wikidocs.net/44249)
 
-Ngram 분석
+##Ngram 분석
 kiwi를 기반으로 단어 분리 
 연대별 / 연도별로 ngram 결과를 분류하여 제공
 시각화에는 matplotlib.pyplot 사용
 https://matplotlib.org/3.5.3/api/_as_gen/matplotlib.pyplot.html 
 
-2. 기술 통계량
+#2. 기술 통계량
 
 
  연대별 출현에 따른 ‘빈도(비율)’ 기술통계량
@@ -45,5 +46,5 @@ https://matplotlib.org/3.5.3/api/_as_gen/matplotlib.pyplot.html
 
 
 
-3. 저자
+#3. 저자
 (추후 논문 심사 이후 기재 예정)
