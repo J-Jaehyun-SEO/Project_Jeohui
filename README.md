@@ -40,6 +40,7 @@ https://matplotlib.org/3.5.3/api/_as_gen/matplotlib.pyplot.html
 
 
  연대별 출현에 따른 ‘빈도(비율)’ 기술통계량
+ 
 ![image](https://github.com/user-attachments/assets/752b1fd8-bf80-4b13-90e5-593cd6aa812f)
 
 
